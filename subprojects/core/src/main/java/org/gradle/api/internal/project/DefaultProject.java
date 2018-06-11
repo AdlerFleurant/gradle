@@ -80,6 +80,7 @@ import org.gradle.configuration.project.ProjectConfigurationActionContainer;
 import org.gradle.configuration.project.ProjectEvaluator;
 import org.gradle.groovy.scripts.ScriptSource;
 import org.gradle.internal.Actions;
+import org.gradle.internal.Cast;
 import org.gradle.internal.Factories;
 import org.gradle.internal.Factory;
 import org.gradle.internal.event.ListenerBroadcast;
@@ -630,12 +631,12 @@ public class DefaultProject extends AbstractPluginAware implements ProjectIntern
 
     @Override
     public Set<Project> getAllprojects() {
-        return new TreeSet<Project>(getProjectRegistry().getAllProjects(getPath()));
+        return Cast.uncheckedCast(getProjectRegistry().getAllProjects(getPath()));
     }
 
     @Override
     public Set<Project> getSubprojects() {
-        return new TreeSet<Project>(getProjectRegistry().getSubProjects(getPath()));
+        return Cast.uncheckedCast(getProjectRegistry().getSubProjects(getPath()));
     }
 
     @Override

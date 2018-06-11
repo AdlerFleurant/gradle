@@ -17,7 +17,6 @@ package org.gradle.api.internal.project;
 
 import org.gradle.api.InvalidUserDataException;
 import org.gradle.api.Project;
-import org.gradle.api.specs.Spec;
 import org.gradle.test.fixtures.file.TestNameTestDirectoryProvider;
 import org.gradle.util.TestUtil;
 import org.junit.Before;
@@ -30,8 +29,16 @@ import java.util.TreeSet;
 import static junit.framework.Assert.assertSame;
 import static org.gradle.util.WrapUtil.toSet;
 import static org.gradle.util.WrapUtil.toSortedSet;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
+import static org.hamcrest.Matchers.startsWith;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class DefaultProjectRegistryTest {
     public static final String CHILD_NAME = "child";
@@ -105,17 +112,6 @@ public class DefaultProjectRegistryTest {
     public void canLocalAllProjects() {
         assertThat(projectRegistry.getAllProjects(), equalTo(toSet((ProjectInternal) rootMock, childMock,
                 childChildMock)));
-    }
-
-    @Test
-    public void canLocateAllProjectsWhichMatchSpec() {
-        Spec<Project> spec = new Spec<Project>() {
-            public boolean isSatisfiedBy(Project element) {
-                return element.getName().contains("child");
-            }
-        };
-
-        assertThat(projectRegistry.findAll(spec), equalTo(toSet((ProjectInternal) childMock, childChildMock)));
     }
 
     @Test

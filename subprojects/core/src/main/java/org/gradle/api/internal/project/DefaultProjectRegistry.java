@@ -17,32 +17,40 @@ package org.gradle.api.internal.project;
 
 import org.gradle.api.InvalidUserDataException;
 import org.gradle.api.Project;
-import org.gradle.api.specs.Spec;
-import org.gradle.util.GUtil;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 public class DefaultProjectRegistry<T extends ProjectIdentifier> implements ProjectRegistry<T> {
-    private Map<String, T> projects = new HashMap<String, T>();
-    private Map<String, Set<T>> subProjects = new HashMap<String, Set<T>>();
+    private Set<T> projects = new TreeSet<T>();
+    private Map<String, T> projectsByPath = new HashMap<String, T>();
+    private Map<String, Set<T>> subProjectsByPath = new HashMap<String, Set<T>>();
+    private Map<String, Set<T>> allProjectsByPath = new HashMap<String, Set<T>>();
 
     public void addProject(T project) {
-        projects.put(project.getPath(), project);
-        subProjects.put(project.getPath(), new HashSet<T>());
+        projects.add(project);
+        projectsByPath.put(project.getPath(), project);
+        subProjectsByPath.put(project.getPath(), new TreeSet<T>());
+        TreeSet<T> allProjects = new TreeSet<T>();
+        allProjects.add(project);
+        this.allProjectsByPath.put(project.getPath(), allProjects);
         addProjectToParentSubProjects(project);
     }
 
     public T removeProject(String path) {
-        T project = projects.remove(path);
+        T project = projectsByPath.remove(path);
         assert project != null;
-        subProjects.remove(path);
+        projects.remove(project);
+        subProjectsByPath.remove(path);
+        allProjectsByPath.remove(path);
         ProjectIdentifier loopProject = project.getParentIdentifier();
         while (loopProject != null) {
-            subProjects.get(loopProject.getPath()).remove(project);
+            subProjectsByPath.get(loopProject.getPath()).remove(project);
+            allProjectsByPath.get(loopProject.getPath()).remove(project);
             loopProject = loopProject.getParentIdentifier();
         }
         return project;
@@ -51,13 +59,14 @@ public class DefaultProjectRegistry<T extends ProjectIdentifier> implements Proj
     private void addProjectToParentSubProjects(T project) {
         ProjectIdentifier loopProject = project.getParentIdentifier();
         while (loopProject != null) {
-            subProjects.get(loopProject.getPath()).add(project);
+            subProjectsByPath.get(loopProject.getPath()).add(project);
+            allProjectsByPath.get(loopProject.getPath()).add(project);
             loopProject = loopProject.getParentIdentifier();
         }
     }
 
     public Set<T> getAllProjects() {
-        return new HashSet<T>(projects.values());
+        return Collections.unmodifiableSet(projects);
     }
 
     @Override
@@ -66,41 +75,39 @@ public class DefaultProjectRegistry<T extends ProjectIdentifier> implements Proj
     }
 
     public T getProject(String path) {
-        return projects.get(path);
+        return projectsByPath.get(path);
     }
 
     public T getProject(final File projectDir) {
-        Set<T> projects = findAll(new Spec<T>() {
-            public boolean isSatisfiedBy(T element) {
-                return element.getProjectDir().equals(projectDir);
+        T match = null;
+        Set<T> multipleMatches = null;
+        for (T project : projects) {
+            if (project.getProjectDir().equals(projectDir)) {
+                if (match == null) {
+                    match = project;
+                } else {
+                    if (multipleMatches == null) {
+                        multipleMatches = new TreeSet<T>();
+                        multipleMatches.add(match);
+                    }
+                    multipleMatches.add(project);
+                }
             }
-        });
-        if (projects.size() > 1) {
-            throw new InvalidUserDataException(String.format("Found multiple projects with project directory '%s': %s",
-                    projectDir, projects));
         }
-        return projects.size() == 1 ? projects.iterator().next() : null;
+        if (multipleMatches != null) {
+            throw new InvalidUserDataException(String.format("Found multiple projects with project directory '%s': %s", projectDir, multipleMatches));
+        }
+
+        return match;
     }
 
     public Set<T> getAllProjects(String path) {
-        Set<T> result = new HashSet<T>(getSubProjects(path));
-        if (projects.get(path) != null) {
-            result.add(projects.get(path));
-        }
-        return result;
+        Set<T> projects = allProjectsByPath.get(path);
+        return projects != null ? projects : Collections.<T>emptySet();
     }
 
     public Set<T> getSubProjects(String path) {
-        return GUtil.elvis(subProjects.get(path), new HashSet<T>());
-    }
-
-    public Set<T> findAll(Spec<? super T> constraint) {
-        Set<T> matches = new HashSet<T>();
-        for (T project : projects.values()) {
-            if (constraint.isSatisfiedBy(project)) {
-                matches.add(project);
-            }
-        }
-        return matches;
+        Set<T> projects = subProjectsByPath.get(path);
+        return projects != null ? projects : Collections.<T>emptySet();
     }
 }

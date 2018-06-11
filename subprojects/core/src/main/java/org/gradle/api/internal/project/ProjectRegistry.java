@@ -15,8 +15,6 @@
  */
 package org.gradle.api.internal.project;
 
-import org.gradle.api.specs.Spec;
-
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Set;
@@ -35,6 +33,4 @@ public interface ProjectRegistry<T extends ProjectIdentifier> {
     Set<T> getAllProjects(String path);
 
     Set<T> getSubProjects(String path);
-
-    Set<T> findAll(Spec<? super T> constraint);
 }
